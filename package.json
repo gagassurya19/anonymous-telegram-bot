@@ -1,0 +1,29 @@
+{
+  "type": "module",
+  "name": "temangabut-anonim-chatbot-telegram",
+  "version": "1.0.0",
+  "description": "ChatBot cari teman gabut anonymous telegram",
+  "main": "app.js",
+  "author": "Gagas Surya",
+  "contributors": [
+    {
+      "name": "Bela",
+      "subject": "Anon user",
+      "role": ["QA", "BA", "Tester"]
+    }
+  ],
+  "license": "MIT",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "@prisma/client": "5.6.0",
+    "dotenv": "^16.3.1",
+    "nodemon": "^3.0.1",
+    "telegraf": "^4.15.0"
+  },
+  "devDependencies": {
+    "prisma": "5.6.0"
+  }
+}
