@@ -102,17 +102,15 @@ export const Command = {
       let countUser = await prisma.user.count();
 
       // Start looking for a new partner
-      await ctx.reply(
+      const startMessage = await ctx.reply(
         `🚀 Start looking for a partner for you... \n\nTotal chats active: ${countChatActive} \nTotal users active: ${countUser}`,
         generateInlineKeyboardButton(buttons.cancelSearch)
       );
 
       await userRegisterOrUpdate(ctx);
 
-      let chat;
-
       // Check for a chat with status waiting and not the same user id
-      chat = await prisma.chat.findFirst({
+      let chat = await prisma.chat.findFirst({
         where: {
           status: "WAITING",
           user_id: { not: ctx.userData.id },
@@ -128,32 +126,36 @@ export const Command = {
 
         const partner = await findUserByIdDB(chat.user_id);
 
-        // Batch delete messages
-        await Promise.all([
-          ctx.telegram.deleteMessage(
-            ctx.message.from.id,
-            ctx.message.message_id + 1
-          ),
-          ctx.telegram.deleteMessage(
-            partner.telegram_user_id,
-            ctx.message.message_id - 1
-          ),
-        ]);
-
         // Send messages to user and partner
-        const userMessage = `✨ It's a match! ✨ \n 💬 #${partner.telegram_user_id.slice(
-          0,
-          -3
-        )}`;
-        const partnerMessage = `✨ It's a match! ✨ \n 💬 #${ctx.userData.telegram_user_id.slice(
-          0,
-          -3
-        )}`;
-
         await Promise.all([
-          ctx.reply(userMessage),
-          ctx.telegram.sendMessage(partner.telegram_user_id, partnerMessage),
+          ctx.reply(
+            `✨ It's a match! ✨ \n 💬 #${partner.telegram_user_id.slice(
+              0,
+              -3
+            )}`
+          ),
+          ctx.telegram.sendMessage(
+            partner.telegram_user_id,
+            `✨ It's a match! ✨ \n 💬 #${ctx.userData.telegram_user_id.slice(
+              0,
+              -3
+            )}`
+          ),
         ]);
+
+        // Delete the start message
+        await ctx.telegram.deleteMessage(ctx.chat.id, startMessage.message_id);
+
+        // Delete the partner's start message
+        let success = true;
+        try {
+          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id + 1);
+        } catch (err) {
+          success = false;
+        }
+        if (!success) {
+          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id - 1);
+        }
       } else {
         // Check if the user has already created a chat
         chat = await prisma.chat.findFirst({
@@ -211,11 +213,9 @@ export const Command = {
       let countUser = await prisma.user.count();
 
       // Start looking for a new partner
-      await ctx.reply(
-        `🚀 Start looking for a partner for you... \n
-        Total chat active: ${countChatActive} \n
-        Total user: ${countUser}`,
-        generateInlineKeyboardButton(buttons.cancel)
+      const startMessage = await ctx.reply(
+        `🚀 Start looking for a partner for you... \n\nTotal chats active: ${countChatActive} \nTotal users active: ${countUser}`,
+        generateInlineKeyboardButton(buttons.cancelSearch)
       );
 
       // Update user data
@@ -237,21 +237,9 @@ export const Command = {
         });
 
         const partner = await findUserByIdDB(chat.user_id);
-
-        // Delete the current message
-        await Promise.all([
-          ctx.telegram.deleteMessage(
-            ctx.message.from.id,
-            ctx.message.message_id + 1
-          ),
-          ctx.telegram.deleteMessage(
-            partner.telegram_user_id,
-            ctx.message.message_id - 1
-          ),
-        ]);
-
-        // Send messages to user and partner
-        await Promise.all([
+        
+         // Send messages to user and partner
+         await Promise.all([
           ctx.reply(
             `✨ It's a match! ✨ \n 💬 #${partner.telegram_user_id.slice(
               0,
@@ -266,6 +254,21 @@ export const Command = {
             )}`
           ),
         ]);
+
+        // Delete the start message
+        await ctx.telegram.deleteMessage(ctx.chat.id, startMessage.message_id);
+
+        // Delete the partner's start message
+        let success = true;
+        try {
+          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id - 1);
+        } catch (err) {
+          success = false;
+          console.log(err);
+        }
+        if (!success) {
+          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id + 1);
+        }
       } else {
         // Check if the user already created a chat
         chat = await prisma.chat.findFirst({
@@ -389,6 +392,66 @@ export const Command = {
       }
     } catch (err) {
       console.log("[CMD]editMessage: ", err.message);
+    }
+  },
+
+  // make function for broadcast message to all user
+  broadcast: async (ctx) => {
+    let countUserSuccess = 0;
+    let countUser = 0;
+    try {
+      // check if user is admin
+      const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
+      if (adminId.includes(ctx.from.id.toString())) {
+        // get all user
+        const users = await prisma.user.findMany();
+        // split /broadcast from message
+        let message = ctx.message.text.split("/broadcast");
+        message.unshift("⚠️ Broadcast Message ⚠️");
+        message.push(`\n-----------------------\nAnonymous bot. admin bot tidak akan menyimpan chat, voice, image, dll yang terkirim pada bot ini. semua pesan terkirim secara p2p dan ter-enkripsi.\n\nFrom admin`);
+        message = message.join("\n");
+        // send message to all user
+        await Promise.all(
+          users.map(async (user) => {
+            try {
+              await ctx.telegram.sendMessage(user.telegram_user_id, message);
+              countUserSuccess++;
+            } catch (err) {
+              // console.log("[CMD]broadcast: ", err.message);
+            }
+            countUser++;
+          })
+        );
+        await ctx.reply(
+          "✅ Message broadcasted successfully to " +
+            countUserSuccess +
+            " user" +
+            (countUserSuccess > 1 ? "s" : "") +
+            " out of " +
+            countUser +
+            " user" +
+            (countUser > 1 ? "s" : "") +
+            "!"
+        );
+      }
+    } catch (err) {
+      console.log("[CMD]brodcast: ", err.message);
+    }
+  },
+
+  // make function to know the user info right now
+  userinfo: async (ctx) => {
+    const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
+    if (adminId.includes(ctx.from.id.toString())) {
+      if (ctx.chatData) {
+        const partner = await prisma.user.findFirst({
+          where: {
+            telegram_user_id: partnerId(ctx),
+          },
+        });
+        const message = `info:\n🆔 Telegram ID: ${partner.telegram_user_id}\n👤 Username: ${partner.username}\n👤 First Name: ${partner.first_name}\n🌏 Language: ${partner.language_code}\n📆 Created at:\n${partner.createdAt}\n📆 Updated at:\n${partner.updatedAt}`;
+        await ctx.reply(message);
+      }
     }
   },
 };

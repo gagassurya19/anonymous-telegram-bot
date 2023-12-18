@@ -9,7 +9,11 @@
     {
       "name": "Bela",
       "subject": "Anon user",
-      "role": ["QA", "BA", "Tester"]
+      "role": [
+        "QA",
+        "BA",
+        "Tester"
+      ]
     }
   ],
   "license": "MIT",
@@ -19,6 +23,7 @@
   },
   "dependencies": {
     "@prisma/client": "5.6.0",
+    "async-mutex": "^0.4.0",
     "dotenv": "^16.3.1",
     "nodemon": "^3.0.1",
     "telegraf": "^4.15.0"

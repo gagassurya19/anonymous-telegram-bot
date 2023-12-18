@@ -26,10 +26,10 @@ const handleMessage = async (ctx, messageType) => {
     }
 
     const chat = await findChatActive(ctx.userData.id);
-    if (!chat) {
-      return await ctx.reply(
-        `You don't have a partner yet, type /search to start a conversation.`
-      );
+    // check if user is admin
+    const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
+    if (!adminId.includes(ctx.userData.telegram_user_id) && !chat) {
+      return ctx.reply(`You don't have a partner yet, type /search to start a conversation.`);
     }
 
     switch (messageType) {

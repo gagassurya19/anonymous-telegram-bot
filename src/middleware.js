@@ -33,7 +33,9 @@ export const middleware = async (ctx, next) => {
         : ctx?.update?.callback_query?.data || "-",
       "|",
       ms,
-      "ms"
+      "ms",
+      "|",
+      ctx.userData.telegram_user_id
     );
   } catch (err) {
     console.log("[MIDDLEWARE]: ", err.message);
