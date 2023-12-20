@@ -1,3 +1,5 @@
+import logger from './logger.js';
+
 export const generateInlineButton = (buttons) => {
   return {
     reply_markup: {
@@ -26,7 +28,7 @@ export const sendMessageToPartner = async (ctx, message, options = {}) => {
       options
     );
   } catch (err) {
-    console.log("[BOT]sendMessageToPartner: ", err);
+    logger.error(`[BOT]sendMessageToPartner: ${err}`);
   }
 };
 
@@ -34,7 +36,7 @@ export const sendMessageToUser = async (ctx, message) => {
   try {
     await ctx.reply(message, options);
   } catch (err) {
-    console.log("[BOT]sendMessageToUser: ", err);
+    logger.error(`[BOT]sendMessageToUser: ${err}`);
   }
 };
 
@@ -48,7 +50,7 @@ export const partnerId = (ctx) => {
 
     return id;
   } catch (err) {
-    console.log("[HELPER]partnerId: ", err);
+    logger.error(`[HELPER]partnerId: ${err}`);
   }
 };
 

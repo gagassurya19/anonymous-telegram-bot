@@ -1,3 +1,4 @@
+import logger from './logger.js';
 import { PrismaClient } from "@prisma/client";
 
 export const prisma = new PrismaClient();
@@ -14,7 +15,7 @@ export const createUser = async (ctx) => {
     });
     return user;
   } catch (err) {
-    console.log("[DB]createUser: ", err.message);
+    logger.error(`DB]createUser: ${err}`);
   }
 };
 
@@ -33,7 +34,7 @@ export const updateUser = async (id, ctx) => {
     });
     return user;
   } catch (err) {
-    console.log("[DB]updateUser: ", err.message);
+    logger.error(`[DB]updateUser: ${err}`);
   }
 };
 
@@ -46,7 +47,7 @@ export const findUser = async (id) => {
     });
     return user;
   } catch (err) {
-    console.log("[DB]findUser: ", err.message);
+    logger.error(`[DB]findUser: ${err}`);
   }
 };
 
@@ -59,7 +60,7 @@ export const findUserByIdDB = async (id) => {
     });
     return user;
   } catch (err) {
-    console.log("[DB]findUserByIdDB: ", err.message);
+    logger.error(`[DB]findUserByIdDB: ${err}`);
   }
 };
 
@@ -76,7 +77,7 @@ export const userRegisterOrUpdate = async (ctx) => {
       ctx.userData = userExist;
     });
   } catch (err) {
-    console.log("[DB]userRegisterOrUpdate: ", err.message);
+    logger.error(`[DB]userRegisterOrUpdate: ${err}`);
     return null;
   }
 };
@@ -95,6 +96,6 @@ export const findChatActive = async (userId) => {
     });
     return chat;
   } catch (err) {
-    console.log("[DB]findChat: ", err.message);
+    logger.error(`[DB]findChat: ${err}`);
   }
 };

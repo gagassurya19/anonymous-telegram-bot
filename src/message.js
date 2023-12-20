@@ -1,3 +1,5 @@
+import logger from './logger.js';
+
 export const textMessage = async (ctx, userId) => {
   try {
     if (ctx.message.reply_to_message) {
@@ -8,7 +10,7 @@ export const textMessage = async (ctx, userId) => {
       await ctx.telegram.sendMessage(userId, ctx.message.text);
     }
   } catch (err) {
-    console.log("[MESSAGE]textMessage: ", err.message);
+    logger.error(`[MESSAGE]textMessage: ${err}`);
   }
 };
 
@@ -22,7 +24,7 @@ export const stickerMessage = async (ctx, userId) => {
       await ctx.telegram.sendSticker(userId, ctx.message.sticker.file_id);
     }
   } catch (err) {
-    console.log("[MESSAGE]stickerMessage: ", err.message);
+    logger.error(`[MESSAGE]stickerMessage: ${err}`);
   }
 };
 
@@ -39,7 +41,7 @@ export const voiceMessage = async (ctx, userId) => {
       });
     }
   } catch (err) {
-    console.log("[MESSAGE]voiceMessage: ", err.message);
+    logger.error(`[MESSAGE]voiceMessage: ${err}`);
   }
 };
 
@@ -57,7 +59,7 @@ export const photoMessage = async (ctx, userId) => {
       });
     }
   } catch (err) {
-    console.log("[MESSAGE]photoMessage: ", err.message);
+    logger.error(`[MESSAGE]photoMessage: ${err}`);
   }
 };
 
@@ -75,7 +77,7 @@ export const videoMessage = async (ctx, userId) => {
       });
     }
   } catch (err) {
-    console.log("[MESSAGE]videoMessage: ", err.message);
+    logger.error(`[MESSAGE]videoMessage: ${err}`);
   }
 };
 
@@ -93,7 +95,7 @@ export const documentMessage = async (ctx, userId) => {
       });
     }
   } catch (err) {
-    console.log("[MESSAGE]documentMessage: ", err.message);
+    logger.error(`[MESSAGE]documentMessage: ${err}`);
   }
 };
 
@@ -111,7 +113,7 @@ export const animationMessage = async (ctx, userId) => {
       });
     }
   } catch (err) {
-    console.log("[MESSAGE]animationMessage: ", err.message);
+    logger.error(`[MESSAGE]animationMessage: ${err}`);
   }
 };
 
@@ -147,6 +149,6 @@ export const locationMessage = async (ctx, userId) => {
       );
     }
   } catch (err) {
-    console.log("[MESSAGE]locationMessage: ", err.message);
+    logger.error(`[MESSAGE]locationMessage: ${err}`);
   }
 };

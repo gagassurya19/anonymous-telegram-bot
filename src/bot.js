@@ -1,3 +1,4 @@
+import logger from './logger.js';
 import { Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import { Command, CommandButtons } from "./command.js";
@@ -26,10 +27,8 @@ const handleMessage = async (ctx, messageType) => {
     }
 
     const chat = await findChatActive(ctx.userData.id);
-    // check if user is admin
-    const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
-    if (!adminId.includes(ctx.userData.telegram_user_id) && !chat) {
-      return ctx.reply(`You don't have a partner yet, type /search to start a conversation.`);
+    if(!chat){
+      return await ctx.reply(`You don't have a partner yet, type /search to start a conversation.`)
     }
 
     switch (messageType) {
@@ -65,7 +64,7 @@ const handleMessage = async (ctx, messageType) => {
         );
     }
   } catch (err) {
-    console.log(err);
+    logger.error(`🚀 ~ file: bot.js ~ handleMessage ~ err: ${err}`)
   }
 };
 

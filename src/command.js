@@ -1,3 +1,4 @@
+import logger from './logger.js';
 import { prisma, userRegisterOrUpdate, findUserByIdDB } from "./db.js";
 import {
   generateInlineButton,
@@ -87,7 +88,7 @@ export const Command = {
         `Hi ${name} Welcome to the ${ctx.botInfo.first_name}, type /search to start a conversation.`
       );
     } catch (err) {
-      console.log("[CMD]start: ", err.message);
+      logger.error(`[CMD]start: ${err}`);
     }
   },
   search: async (ctx) => {
@@ -172,7 +173,7 @@ export const Command = {
 
       ctx.chatData = chat;
     } catch (err) {
-      console.error("[CMD]search: ", err.message);
+      logger.error(`[CMD]search: ${err}`);
     }
   },
 
@@ -264,7 +265,7 @@ export const Command = {
           await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id - 1);
         } catch (err) {
           success = false;
-          console.log(err);
+          logger.error(err);
         }
         if (!success) {
           await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id + 1);
@@ -286,7 +287,7 @@ export const Command = {
       // Update chat data
       ctx.chatData = chat;
     } catch (err) {
-      console.log("[CMD]next: ", err.message);
+      logger.error(`[CMD]next: ${err}`);
     }
   },
 
@@ -316,7 +317,7 @@ export const Command = {
       // Reset chatData
       ctx.chatData = null;
     } catch (err) {
-      console.log("[CMD]end: ", err.message);
+      logger.error(`[CMD]end: ${err}`);
     }
   },
 
@@ -336,7 +337,7 @@ export const Command = {
         generateInlineKeyboardButton(buttons.options)
       );
     } catch (err) {
-      console.log("[CMD]options: ", err.message);
+      logger.error(`[CMD]options: ${err}`);
     }
   },
 
@@ -348,7 +349,7 @@ export const Command = {
         generateInlineKeyboardButton(buttons.menu)
       );
     } catch (err) {
-      console.log("[CMD]Settings: ", err.message);
+      logger.error(`[CMD]Settings: ${err}`);
     }
   },
 
@@ -365,7 +366,7 @@ export const Command = {
         );
       }
     } catch (err) {
-      console.log("[CMD]unsend: ", err.message);
+      logger.error(`[CMD]unsend: ${err}`);
     }
   },
 
@@ -391,7 +392,7 @@ export const Command = {
         );
       }
     } catch (err) {
-      console.log("[CMD]editMessage: ", err.message);
+      logger.error(`[CMD]editMessage: ${err}`);
     }
   },
 
@@ -417,7 +418,7 @@ export const Command = {
               await ctx.telegram.sendMessage(user.telegram_user_id, message);
               countUserSuccess++;
             } catch (err) {
-              // console.log("[CMD]broadcast: ", err.message);
+              // logger.error("[CMD]broadcast: ", err);
             }
             countUser++;
           })
@@ -435,23 +436,27 @@ export const Command = {
         );
       }
     } catch (err) {
-      console.log("[CMD]brodcast: ", err.message);
+      logger.error(`[CMD]brodcast: ${err}`);
     }
   },
 
   // make function to know the user info right now
   userinfo: async (ctx) => {
-    const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
-    if (adminId.includes(ctx.from.id.toString())) {
-      if (ctx.chatData) {
-        const partner = await prisma.user.findFirst({
-          where: {
-            telegram_user_id: partnerId(ctx),
-          },
-        });
-        const message = `info:\n🆔 Telegram ID: ${partner.telegram_user_id}\n👤 Username: ${partner.username}\n👤 First Name: ${partner.first_name}\n🌏 Language: ${partner.language_code}\n📆 Created at:\n${partner.createdAt}\n📆 Updated at:\n${partner.updatedAt}`;
-        await ctx.reply(message);
+    try {
+      const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
+      if (adminId.includes(ctx.from.id.toString())) {
+        if (ctx.chatData) {
+          const partner = await prisma.user.findFirst({
+            where: {
+              telegram_user_id: partnerId(ctx),
+            },
+          });
+          const message = `info:\n🆔 Telegram ID: ${partner.telegram_user_id}\n👤 Username: ${partner.username}\n👤 First Name: ${partner.first_name}\n🌏 Language: ${partner.language_code}\n📆 Created at:\n${partner.createdAt}\n📆 Updated at:\n${partner.updatedAt}`;
+          await ctx.reply(message);
+        }
       }
+    } catch(err) {
+      logger.error(`[CMD]userinfo: ${err}`);
     }
   },
 };
@@ -463,7 +468,7 @@ export const CommandButtons = {
       await ctx.deleteMessage();
       await ctx.reply(`🔧 Change profile - coming soon`);
     } catch (err) {
-      console.log("[CMD]change_profile: ", err.message);
+      logger.error(`[CMD]change_profile: ${err}`);
     }
   },
 
@@ -472,7 +477,7 @@ export const CommandButtons = {
       await ctx.deleteMessage();
       await ctx.reply(`🔧 List friend - coming soon`);
     } catch (err) {
-      console.log("[CMD]list_friend: ", err.message);
+      logger.error(`[CMD]list_friend: ${err}`);
     }
   },
 
@@ -481,7 +486,7 @@ export const CommandButtons = {
       await ctx.deleteMessage();
       await ctx.reply(`🔧 List block - coming soon`);
     } catch (err) {
-      console.log("[CMD]list_block: ", err.message);
+      logger.error(`[CMD]list_block: ${err}`);
     }
   },
 
@@ -490,7 +495,7 @@ export const CommandButtons = {
       await ctx.reply(`🔧 Block user - coming soon`);
       await ctx.deleteMessage();
     } catch (err) {
-      console.log("[CMD]block_user: ", err.message);
+      logger.error(`[CMD]block_user: ${err}`);
     }
   },
 
@@ -499,7 +504,7 @@ export const CommandButtons = {
       await ctx.deleteMessage();
       await ctx.reply(`🔧 Add friend - coming soon`);
     } catch (err) {
-      console.log("[CMD]add_friend: ", err.message);
+      logger.error(`[CMD]add_friend: ${err}`);
     }
   },
 
@@ -517,7 +522,7 @@ export const CommandButtons = {
         await ctx.telegram.sendMessage(partnerId(ctx), partnerUsername);
       }
     } catch (err) {
-      console.log("[CMD]send_username: ", err.message);
+      logger.error(`[CMD]send_username: ${err}`);
     }
   },
 
@@ -525,7 +530,7 @@ export const CommandButtons = {
     try {
       await ctx.deleteMessage();
     } catch (err) {
-      console.log("[CMD]cancel: ", err.message);
+      logger.error(`[CMD]cancel: ${err}`);
     }
   },
 
@@ -556,7 +561,7 @@ export const CommandButtons = {
         `🛑 You have canceled the conversation, type /search to start another one.`
       );
     } catch (err) {
-      console.log("[CMD]cancelSearch: ", err.message);
+      logger.error(`[CMD]cancelSearch: ${err}`);
     }
   },
 
@@ -565,7 +570,7 @@ export const CommandButtons = {
       await ctx.deleteMessage();
       await ctx.reply(`🔧 Help - coming soon`);
     } catch (err) {
-      console.log("[CMD]help: ", err.message);
+      logger.error(`[CMD]help: ${err}`);
     }
   },
 };

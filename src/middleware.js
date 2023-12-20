@@ -1,3 +1,5 @@
+import logger from "./logger.js";
+
 import { prisma, findUser, createUser, findChatActive } from "./db.js";
 import { dateNow } from "./helper.js";
 
@@ -17,27 +19,29 @@ export const middleware = async (ctx, next) => {
     await next();
 
     const ms = new Date() - start;
-    console.log(
-      "[MIDDLEWARE]: ",
-      dateNow(),
-      "|",
-      ctx?.chatData?.id || "-",
-      "|",
-      ctx?.from?.first_name || "-",
-      "|",
-      ctx?.message != null
-        ? ctx?.message?.entities &&
-          ctx?.message?.entities[0]?.type == "bot_command"
-          ? ctx?.message?.text
-          : "-"
-        : ctx?.update?.callback_query?.data || "-",
-      "|",
-      ms,
-      "ms",
-      "|",
-      ctx.userData.telegram_user_id
-    );
+    if(process.env.LOG_MIDDLEWARE_LIVE || false) {
+      console.log(
+        "[MIDDLEWARE]: ",
+        dateNow(),
+        "|",
+        ctx?.chatData?.id || "-",
+        "|",
+        ctx?.from?.first_name || "-",
+        "|",
+        ctx?.message != null
+          ? ctx?.message?.entities &&
+            ctx?.message?.entities[0]?.type == "bot_command"
+            ? ctx?.message?.text
+            : "-"
+          : ctx?.update?.callback_query?.data || "-",
+        "|",
+        ms,
+        "ms",
+        "|",
+        ctx.userData.telegram_user_id
+      );
+    }
   } catch (err) {
-    console.log("[MIDDLEWARE]: ", err.message);
+    logger.error(`[MIDDLEWARE]: ${err}`);
   }
 };
