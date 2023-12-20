@@ -54,6 +54,19 @@ export const partnerId = (ctx) => {
   }
 };
 
+export const partnerIdDB = (ctx) => {
+  try {
+    const id =
+      ctx?.userData?.id == ctx?.chatData?.user_id
+        ? ctx?.chatData?.partner?.id
+        : ctx?.chatData?.user?.id;
+
+    return id;
+  } catch (err) {
+    logger.error(`[HELPER]partnerIdDB: ${err}`);
+  }
+};
+
 export const dateNow = () => {
   // date is like: 2021-07-04 12:00:00
   let date = new Date();

@@ -1,4 +1,4 @@
-import logger from './logger.js';
+import logger from "./logger.js";
 
 export const textMessage = async (ctx, userId) => {
   try {
@@ -7,7 +7,17 @@ export const textMessage = async (ctx, userId) => {
         reply_to_message_id: ctx.message.reply_to_message.message_id - 1,
       });
     } else {
-      await ctx.telegram.sendMessage(userId, ctx.message.text);
+      // check if message contains "format:"
+      if (ctx.message.text.includes("#f")) {
+        ctx.message.text = ctx.message.text.replace("#f", "");
+        ctx.message.text = ctx.message.text.replace(/\|/g, "||");
+        ctx.message.text = ctx.message.text.replace(/\_/g, "__");
+        await ctx.telegram.sendMessage(userId, ctx.message.text, {
+          parse_mode: "MarkdownV2",
+        });
+      } else {
+        await ctx.telegram.sendMessage(userId, ctx.message.text);
+      }
     }
   } catch (err) {
     logger.error(`[MESSAGE]textMessage: ${err}`);

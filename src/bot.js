@@ -70,6 +70,19 @@ const handleMessage = async (ctx, messageType) => {
 
 bot.use(middleware);
 
+bot.command('format', (ctx) => {
+  const formattedText = `
+    *Bold* 
+    _Italic_
+    __Underline__
+    ~Strikethrough~
+    ||Spoiler||
+    *Bold _Italic Bold ~Italic Bold Strikethrough ||Italic Bold Strikethrough Spoiler||~ __Underline Italic Bold___ Bold*
+  `;
+
+  ctx.reply(formattedText, { parse_mode: 'MarkdownV2' });
+});
+
 // Register commands dynamically
 Object.keys(Command).forEach((command) => {
   bot.command(command, async (ctx) => {

@@ -1,9 +1,10 @@
-import logger from './logger.js';
+import logger from "./logger.js";
 import { prisma, userRegisterOrUpdate, findUserByIdDB } from "./db.js";
 import {
   generateInlineButton,
   generateInlineKeyboardButton,
   partnerId,
+  partnerIdDB,
 } from "./helper.js";
 
 const buttons = {
@@ -13,16 +14,16 @@ const buttons = {
         text: "Daftar blokir",
         callback_data: "list_block",
       },
-      {
-        text: "Daftar teman",
-        callback_data: "list_friend",
-      },
+      // {
+      //   text: "Daftar teman",
+      //   callback_data: "list_friend",
+      // },
     ],
     [
-      {
-        text: "Ubah profile",
-        callback_data: "change_profile",
-      },
+      // {
+      //   text: "Ubah profile",
+      //   callback_data: "change_profile",
+      // },
     ],
     [
       {
@@ -37,10 +38,10 @@ const buttons = {
         text: "Block user",
         callback_data: "block_user",
       },
-      {
-        text: "Add friends",
-        callback_data: "add_friend",
-      },
+      // {
+      //   text: "Add friends",
+      //   callback_data: "add_friend",
+      // },
     ],
     [
       {
@@ -67,6 +68,18 @@ const buttons = {
     [
       {
         text: "Cancel",
+        callback_data: "cancel",
+      },
+    ],
+  ],
+  block: [
+    [
+      {
+        text: "Unblock All",
+        callback_data: "unblock_all",
+      },
+      {
+        text: "❌ Close",
         callback_data: "cancel",
       },
     ],
@@ -110,7 +123,6 @@ export const Command = {
 
       await userRegisterOrUpdate(ctx);
 
-      // Check for a chat with status waiting and not the same user id
       let chat = await prisma.chat.findFirst({
         where: {
           status: "WAITING",
@@ -118,7 +130,23 @@ export const Command = {
         },
       });
 
-      if (chat) {
+      // check if user is blocked by partner or partner blocked by user
+      const blockUser = await prisma.block.findMany({
+        where: {
+          OR: [
+            {
+              user_id: ctx.userData.id,
+              user_blocked_id: partnerIdDB(ctx),
+            },
+            {
+              user_id: partnerIdDB(ctx),
+              user_blocked_id: ctx.userData.id,
+            },
+          ],
+        },
+      });
+
+      if (chat && blockUser.length === 0) {
         // Update chat status to active
         await prisma.chat.update({
           where: { id: chat.id },
@@ -150,12 +178,18 @@ export const Command = {
         // Delete the partner's start message
         let success = true;
         try {
-          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id + 1);
+          await ctx.telegram.deleteMessage(
+            partner.telegram_user_id,
+            ctx.message.message_id + 1
+          );
         } catch (err) {
           success = false;
         }
         if (!success) {
-          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id - 1);
+          await ctx.telegram.deleteMessage(
+            partner.telegram_user_id,
+            ctx.message.message_id - 1
+          );
         }
       } else {
         // Check if the user has already created a chat
@@ -230,7 +264,23 @@ export const Command = {
         },
       });
 
-      if (chat) {
+      // check if user is blocked by partner or partner blocked by user
+      const blockUser = await prisma.block.findMany({
+        where: {
+          OR: [
+            {
+              user_id: ctx.userData.id,
+              user_blocked_id: partnerIdDB(ctx),
+            },
+            {
+              user_id: partnerIdDB(ctx),
+              user_blocked_id: ctx.userData.id,
+            },
+          ],
+        },
+      });
+
+      if (chat && blockUser.length === 0) {
         // Update chat status to active
         await prisma.chat.update({
           where: { id: chat.id },
@@ -238,9 +288,9 @@ export const Command = {
         });
 
         const partner = await findUserByIdDB(chat.user_id);
-        
-         // Send messages to user and partner
-         await Promise.all([
+
+        // Send messages to user and partner
+        await Promise.all([
           ctx.reply(
             `✨ It's a match! ✨ \n 💬 #${partner.telegram_user_id.slice(
               0,
@@ -262,13 +312,19 @@ export const Command = {
         // Delete the partner's start message
         let success = true;
         try {
-          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id - 1);
+          await ctx.telegram.deleteMessage(
+            partner.telegram_user_id,
+            ctx.message.message_id - 1
+          );
         } catch (err) {
           success = false;
           logger.error(err);
         }
         if (!success) {
-          await ctx.telegram.deleteMessage(partner.telegram_user_id, ctx.message.message_id + 1);
+          await ctx.telegram.deleteMessage(
+            partner.telegram_user_id,
+            ctx.message.message_id + 1
+          );
         }
       } else {
         // Check if the user already created a chat
@@ -409,7 +465,9 @@ export const Command = {
         // split /broadcast from message
         let message = ctx.message.text.split("/broadcast");
         message.unshift("⚠️ Broadcast Message ⚠️");
-        message.push(`\n-----------------------\nAnonymous bot. admin bot tidak akan menyimpan chat, voice, image, dll yang terkirim pada bot ini. semua pesan terkirim secara p2p dan ter-enkripsi.\n\nFrom admin`);
+        message.push(
+          `\n-----------------------\nAnonymous bot. Admin bot tidak akan menyimpan chat, voice, image, video, sticker yang terkirim pada bot ini. Semua pesan terkirim secara end-to-end dan ter-enkripsi oleh Telegram.\n\nFrom admin`
+        );
         message = message.join("\n");
         // send message to all user
         await Promise.all(
@@ -455,8 +513,93 @@ export const Command = {
           await ctx.reply(message);
         }
       }
-    } catch(err) {
+    } catch (err) {
       logger.error(`[CMD]userinfo: ${err}`);
+    }
+  },
+
+  // make function to know the stats of bot
+  stats: async (ctx) => {
+    try {
+      const start = new Date();
+      const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
+      if (adminId.includes(ctx.from.id.toString())) {
+        const messageWait = await ctx.reply("📊 Stats: waiting...");
+        let countChatActive = await prisma.chat.count({
+          where: { status: "ACTIVE" },
+        });
+        let countUser = await prisma.user.count();
+        const date = new Date();
+        date.setMinutes(date.getMinutes() - 15);
+        const countUserActive = await prisma.user.count({
+          where: {
+            updatedAt: {
+              gte: date,
+            },
+          },
+        });
+        await ctx.telegram.deleteMessage(ctx.chat.id, messageWait.message_id);
+        const ms = new Date() - start; // ms
+        const message = `📊 Stats:\n👤 Total users: ${countUser}\n👤 Total users active: ${countUserActive}\n💬 Total chats active: ${countChatActive}\n\nProcess Time: ${ms}ms`;
+        await ctx.reply(message);
+      }
+    } catch (err) {
+      logger.error(`[CMD]stats: ${err}`);
+    }
+  },
+
+  // help
+  help: async (ctx) => {
+    try {
+      let message = `
+      📖 <b><u>${ctx.botInfo.first_name.toUpperCase()} HELP!</u></b> 📖
+      \n🔧 /search - Find a partner
+      \n🔧 /next - Find a new partner
+      \n🔧 /end - End the conversation
+      \n🔧 /options - Options for your partner
+      \n🔧 /settings - Settings your profile
+      \n🔧 /help - Help
+      \n<b>UNSEND & EDIT MESSAGE</b>
+      <pre>🔧/unsend - Unsend a message\nreply to your message that you want to unsend
+      \n🔧/edit - Edit a message\nreply to your message that you want to edit</pre>
+      \n <b>FORMAT MESSAGE</b>
+      \n 📌 Hide:\n#f | HIDE | \u27A1 <span class="tg-spoiler">HIDE</span>
+      \n 📌 Underline:\n#f _UNDERLINE_ \u27A1 <u>UNDERLINE</u>
+      \n 📌 Strikethrough:\n#f ~STRIKE~ \u27A1 <s>strikethrough</s>
+      \n <b>📖 <u>ABOUT</u></b> 📖
+      \nAnonymous bot. Admin bot tidak akan menyimpan chat, voice, image, video, sticker yang terkirim pada bot ini. Semua pesan terkirim secara end-to-end dan ter-enkripsi oleh Telegram.
+      \nCreated with ☕ Copyrigth 2023
+      `;
+      const adminId = process.env.TELEGRAM_WHITE_LIST_USER_ID.split(",");
+      if (adminId.includes(ctx.from.id.toString())) {
+        message = `
+        📖 <b><u>ADMIN PANEL</u></b> 📖
+        \n 🔧 /broadcast
+        \n 🔧 /userinfo
+        \n 🔧 /stats
+        \n
+        \n📖 <b><u>${ctx.botInfo.first_name.toUpperCase()} HELP!</u></b> 📖
+        \n🔧 /search - Find a partner
+        \n🔧 /next - Find a new partner
+        \n🔧 /end - End the conversation
+        \n🔧 /options - Options for your partner
+        \n🔧 /settings - Settings your profile
+        \n🔧 /help - Help
+        \n<b>UNSEND & EDIT MESSAGE</b>
+        <pre>🔧/unsend - Unsend a message\nreply to your message that you want to unsend
+        \n🔧/edit - Edit a message\nreply to your message that you want to edit</pre>
+        \n <b>FORMAT MESSAGE</b>
+        \n 📌 Hide:\n#f | HIDE | \u27A1 <span class="tg-spoiler">HIDE</span>
+        \n 📌 Underline:\n#f _UNDERLINE_ \u27A1 <u>UNDERLINE</u>
+        \n 📌 Strikethrough:\n#f ~STRIKE~ \u27A1 <s>strikethrough</s>
+        \n <b>📖 <u>ABOUT</u></b> 📖
+        \nAnonymous bot. Admin bot tidak akan menyimpan chat, voice, image, video, sticker yang terkirim pada bot ini. Semua pesan terkirim secara end-to-end dan ter-enkripsi oleh Telegram.
+        \nCreated with ☕ Copyrigth 2023
+        `;
+      }
+      await ctx.reply(message, { parse_mode: "HTML" });
+    } catch (err) {
+      logger.error(`[CMD]help: ${err}`);
     }
   },
 };
@@ -484,16 +627,67 @@ export const CommandButtons = {
   list_block: async (ctx) => {
     try {
       await ctx.deleteMessage();
-      await ctx.reply(`🔧 List block - coming soon`);
+      // get block user from db by user id
+      const blockUser = await prisma.block.findMany({
+        where: {
+          user_id: ctx.userData.id,
+        },
+      });
+      // if block user is empty
+      if (blockUser.length === 0) {
+        await ctx.reply(`⚠️ You don't have a block user yet.`);
+      } else {
+        // if block user is not empty
+        let message = `🔧 List block user:\n`;
+        blockUser.map((user) => {
+          message += `👤 ${user.user_blocked_id}\n`;
+        });
+        await ctx.reply(message, generateInlineKeyboardButton(buttons.block));
+      }
     } catch (err) {
       logger.error(`[CMD]list_block: ${err}`);
     }
   },
 
+  unblock_all: async (ctx) => {
+    try {
+      await ctx.deleteMessage();
+      // get block user from db by user id
+      const blockUser = await prisma.block.findMany({
+        where: {
+          user_id: ctx.userData.id,
+        },
+      });
+      // if block user is empty
+      if (blockUser.length === 0) {
+        // if block user is not empty
+        await ctx.reply(`⚠️ You don't have a block user yet.`);
+      } else {
+        // delete all block user
+        await prisma.block.deleteMany({
+          where: {
+            user_id: ctx.userData.id,
+          },
+        });
+        await ctx.reply(`✅ Unblock all user successfully!`);
+      }
+    } catch (err) {
+      logger.error(`[CMD]unblock_all: ${err}`);
+    }
+  },
+
   block_user: async (ctx) => {
     try {
-      await ctx.reply(`🔧 Block user - coming soon`);
       await ctx.deleteMessage();
+      // insert partner id to block table
+      await prisma.block.create({
+        data: {
+          user_id: ctx.userData.id,
+          user_blocked_id: partnerIdDB(ctx),
+        },
+      });
+      await ctx.reply(`✅ Block user successfully!`);
+      Command.end(ctx);
     } catch (err) {
       logger.error(`[CMD]block_user: ${err}`);
     }
@@ -547,7 +741,8 @@ export const CommandButtons = {
       });
 
       if (!chat) {
-        return await ctx.reply(`⚠️ Type /search to start a conversation.`);
+        // return await ctx.reply(`⚠️ Type /search to start a conversation.`);
+        return;
       }
 
       // Delete the chat
@@ -562,15 +757,6 @@ export const CommandButtons = {
       );
     } catch (err) {
       logger.error(`[CMD]cancelSearch: ${err}`);
-    }
-  },
-
-  help: async (ctx) => {
-    try {
-      await ctx.deleteMessage();
-      await ctx.reply(`🔧 Help - coming soon`);
-    } catch (err) {
-      logger.error(`[CMD]help: ${err}`);
     }
   },
 };
