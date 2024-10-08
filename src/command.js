@@ -594,7 +594,7 @@ export const Command = {
         \n 📌 Strikethrough:\n#f ~STRIKE~ \u27A1 <s>strikethrough</s>
         \n <b>📖 <u>ABOUT</u></b> 📖
         \nAnonymous bot. Admin bot tidak akan menyimpan chat, voice, image, video, sticker yang terkirim pada bot ini. Semua pesan terkirim secara end-to-end dan ter-enkripsi oleh Telegram.
-        \nCreated with ☕ Copyrigth 2023
+        \nCreated with ☕ Copyrigth 2023-2024
         `;
       }
       await ctx.reply(message, { parse_mode: "HTML" });
